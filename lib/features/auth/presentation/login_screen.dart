@@ -29,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _isSignUp = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  // ignore: unused_field
   bool _isGoogleLoading = false;
 
   @override
@@ -50,8 +51,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   void _quickFillCaptainDemo() {
     setState(() {
+      _isSignUp = false;
       _emailController.text = 'durga.relangi@sheride.app';
-      _passwordController.text = 'Lady PilotTestPass@2026';
+      _passwordController.text = 'Captain@123';
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -266,6 +268,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
   }
 
+  // ignore: unused_element
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isGoogleLoading = true);
     try {
@@ -848,53 +851,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                       const SizedBox(height: 14),
 
-                      // Divider OR
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: Colors.grey.shade300)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              'OR',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey.shade500),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey.shade300)),
-                        ],
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Google Sign In Button with Google Logo
-                      OutlinedButton.icon(
-                        onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
-                        icon: _isGoogleLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                              )
-                            : Image.asset(
-                                'assets/icons/google_logo.png',
-                                width: 22,
-                                height: 22,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.g_mobiledata_rounded,
-                                  size: 26,
-                                  color: Colors.red,
-                                ),
-                              ),
-                        label: Text(
-                          _isGoogleLoading ? 'Connecting to Google...' : 'Continue with Google',
-                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: const Color(0xFF1A1A1A)),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 48),
-                          backgroundColor: Colors.white,
-                          side: BorderSide(color: Colors.grey.shade300, width: 1.2),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
+                      // Google Login is hidden per request
+                      const SizedBox(height: 12),
 
                       // Sign In / Register Toggle
                       Row(
