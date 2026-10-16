@@ -198,7 +198,10 @@ class _EarningsScreenState extends State<EarningsScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Row(
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 10,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             ElevatedButton.icon(
                               onPressed: () => _showWithdrawDialog(balance),
@@ -211,7 +214,6 @@ class _EarningsScreenState extends State<EarningsScreen> {
                                 elevation: 0,
                               ),
                             ),
-                            const SizedBox(width: 12),
                             OutlinedButton(
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -407,11 +409,25 @@ class _EarningsScreenState extends State<EarningsScreen> {
           children: [
             Icon(icon, color: AppColors.primary, size: 20),
             const SizedBox(height: 8),
-            Text(mainVal, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(mainVal, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textPrimary)),
+            ),
             const SizedBox(height: 2),
-            Text(title, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary.withValues(alpha: 0.8))),
+            Text(
+              title,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary.withValues(alpha: 0.8)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 2),
-            Text(subVal, style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
+            Text(
+              subVal,
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ],
         ),
       ),

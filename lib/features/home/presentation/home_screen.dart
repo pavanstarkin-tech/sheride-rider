@@ -2,14 +2,12 @@ import 'dart:async';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart' as ll;
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/location_service.dart';
 import '../../../core/services/realtime_db_service.dart';
 import '../../../core/services/fcm_token_service.dart';
-import '../../../core/widgets/sheride_interactive_map.dart';
 import '../../auth/domain/rider_model.dart';
 import '../../rides/data/ride_service.dart';
 import '../../rides/domain/ride_model.dart';
@@ -37,11 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _handledRequestId;
   int _selectedNavIndex = 0;
 
-  double _todayEarnings = 0.0;
-  int _todayRidesCount = 0;
-  int _totalRidesCount = 0;
   double _avgRating = 5.0;
-  int _acceptanceRate = 100;
   List<ActiveRideRequest> _activeRequests = [];
   double _currentLat = 17.0005;
   double _currentLng = 81.7800;
@@ -118,57 +112,29 @@ class _HomeScreenState extends State<HomeScreen> {
           if (!mounted) return;
           if (event.snapshot.exists && event.snapshot.value != null) {
             final data = Map<dynamic, dynamic>.from(event.snapshot.value as Map);
-            final now = DateTime.now();
-            final startOfToday = DateTime(now.year, now.month, now.day).millisecondsSinceEpoch;
-
-            double todayEarn = 0.0;
-            int todayCount = 0;
-            int totalCount = 0;
-            int cancelledCount = 0;
             double ratingSum = 0.0;
             int ratingCount = 0;
 
             data.forEach((key, val) {
               if (val is Map) {
                 final status = (val['status'] ?? '').toString();
-                final fare = (val['fare'] is num) ? (val['fare'] as num).toDouble() : 0.0;
-                final createdAt = (val['createdAt'] is num) ? (val['createdAt'] as num).toInt() : 0;
                 final rating = (val['passengerRating'] is num) ? (val['passengerRating'] as num).toDouble() : null;
 
-                if (status == 'completed') {
-                  totalCount++;
-                  if (rating != null && rating > 0) {
-                    ratingSum += rating;
-                    ratingCount++;
-                  }
-                  if (createdAt >= startOfToday) {
-                    todayCount++;
-                    todayEarn += (fare * 0.85); // 85% net captain payout
-                  }
-                } else if (status == 'cancelled') {
-                  cancelledCount++;
+                if (status == 'completed' && rating != null && rating > 0) {
+                  ratingSum += rating;
+                  ratingCount++;
                 }
               }
             });
 
-            final totalAssigned = totalCount + cancelledCount;
-            final acceptance = totalAssigned > 0 ? ((totalCount / totalAssigned) * 100).round() : 100;
             final calculatedRating = ratingCount > 0 ? (ratingSum / ratingCount) : 5.0;
 
             setState(() {
-              _todayEarnings = todayEarn;
-              _todayRidesCount = todayCount;
-              _totalRidesCount = totalCount;
               _avgRating = calculatedRating;
-              _acceptanceRate = acceptance;
             });
           } else {
             setState(() {
-              _todayEarnings = 0.0;
-              _todayRidesCount = 0;
-              _totalRidesCount = 0;
               _avgRating = 5.0;
-              _acceptanceRate = 100;
             });
           }
         });
@@ -365,14 +331,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _handleLogout() async {
-    final authService = context.read<AuthService>();
-    await authService.signOut();
-    if (mounted) {
-      context.go('/login');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -482,11 +440,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.notifications_none_rounded, color: AppColors.primary),
                     onPressed: () => context.push('/notifications'),
                   ),
-                  // Logout Button
-                  IconButton(
-                    icon: const Icon(Icons.logout_rounded, color: AppColors.primary),
-                    onPressed: _handleLogout,
-                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -553,152 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // Today's Earnings Card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          "TODAY'S EARNINGS",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.1,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Text(
-                            'Daily Instant Payout',
-                            style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '₹${_todayEarnings.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildStatItem('Rides Today', '$_todayRidesCount'),
-                        _buildStatItem('Total Completed', '$_totalRidesCount'),
-                        _buildStatItem('Acceptance', '$_acceptanceRate%'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Interactive Duty Radar Map (Draggable, Web & Mobile)
-              Container(
-                height: 210,
-                width: double.infinity,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: SheRideInteractiveMap(
-                  initialLat: _currentLat,
-                  initialLng: _currentLng,
-                  initialZoom: 14.5,
-                  markers: [
-                    // Captain Live Position Marker
-                    SheRideMarker(
-                      point: ll.LatLng(_currentLat, _currentLng),
-                      width: 50,
-                      height: 50,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: (_isOnline ? Colors.green : AppColors.primary).withValues(alpha: 0.22),
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _isOnline ? Colors.green : AppColors.primary,
-                              border: Border.all(color: Colors.white, width: 2.5),
-                              boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.two_wheeler_rounded, size: 14, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Plot active incoming requests on map
-                    ..._activeRequests.map((req) {
-                      return SheRideMarker(
-                        point: ll.LatLng(req.pickupLat, req.pickupLng),
-                        width: 54,
-                        height: 46,
-                        alignment: Alignment.topCenter,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade800,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '₹${(req.fare * 0.85).round()}',
-                                style: const TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const Icon(Icons.location_on, color: Colors.orange, size: 24),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
 
               // Live Incoming Ride Queue / Radar
               Row(
@@ -880,17 +688,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       );
-  }
-
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
-      ],
-    );
   }
 
   Widget _buildRouteRow(IconData icon, Color iconColor, String title) {

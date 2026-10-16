@@ -591,31 +591,55 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                       // Tab Switcher between Email and Phone
                       Container(
-                        height: 44,
+                        height: 50,
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0EEFD),
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(25),
                         ),
                         child: TabBar(
                           controller: _tabController,
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          indicatorPadding: EdgeInsets.zero,
                           indicator: BoxDecoration(
-                            borderRadius: BorderRadius.circular(22),
+                            borderRadius: BorderRadius.circular(21),
                             color: AppColors.primary,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.25),
-                                blurRadius: 6,
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
                             ],
                           ),
                           labelColor: Colors.white,
                           unselectedLabelColor: AppColors.textSecondary,
-                          labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                          labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13.5),
+                          labelPadding: const EdgeInsets.symmetric(horizontal: 12),
                           dividerColor: Colors.transparent,
                           tabs: [
-                            Tab(text: _isSignUp ? 'Captain Register' : 'Captain Login'),
-                            const Tab(text: 'Mobile OTP'),
+                            Tab(
+                              child: Container(
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: Text(
+                                  _isSignUp ? 'Captain Register' : 'Captain Login',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                            Tab(
+                              child: Container(
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: const Text(
+                                  'Mobile OTP',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),

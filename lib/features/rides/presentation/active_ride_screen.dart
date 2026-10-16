@@ -1,12 +1,16 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mb;
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/location_service.dart';
 import '../../../core/widgets/sheride_interactive_map.dart';
 import '../../auth/domain/rider_model.dart';
 import '../../auth/presentation/widgets/custom_button.dart';
@@ -29,10 +33,13 @@ class ActiveRideScreen extends StatefulWidget {
 }
 
 class _ActiveRideScreenState extends State<ActiveRideScreen> {
+  static const _pipChannel = MethodChannel('com.sheride.rider/pip');
   final _rideService = RideService();
   final _otpController = TextEditingController();
   late RideModel _currentRide;
   StreamSubscription<RideModel?>? _rideSub;
+  StreamSubscription<Position>? _positionSub;
+  Position? _captainPosition;
   bool _isLoading = false;
   mb.MapboxMap? _mapboxMap;
 
@@ -40,7 +47,62 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
   void initState() {
     super.initState();
     _currentRide = widget.ride;
+    _captainPosition = LocationService().lastKnownPosition;
+    _initCaptainLocation();
     _listenToRide();
+    _setPipAllowed(true);
+  }
+
+  Future<void> _enterPipMode() async {
+    try {
+      await _pipChannel.invokeMethod('enterPip');
+    } catch (_) {}
+  }
+
+  Future<void> _setPipAllowed(bool allowed) async {
+    try {
+      await _pipChannel.invokeMethod('setPipAllowed', {'allowed': allowed});
+    } catch (_) {}
+  }
+
+  Future<void> _initCaptainLocation() async {
+    final pos = await LocationService().getCurrentPosition();
+    if (pos != null && mounted) {
+      setState(() => _captainPosition = pos);
+      _updateMapCamera();
+    }
+    _positionSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5),
+    ).listen((p) {
+      if (mounted) {
+        setState(() => _captainPosition = p);
+      }
+    });
+  }
+
+  Future<void> _openGoogleMapsNavigation(double lat, double lng, String label) async {
+    final googleMapsNavUri = Uri.parse('google.navigation:q=$lat,$lng&mode=d');
+    final googleMapsWebUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving');
+
+    try {
+      if (await canLaunchUrl(googleMapsNavUri)) {
+        await launchUrl(googleMapsNavUri, mode: LaunchMode.externalNonBrowserApplication);
+      } else if (await canLaunchUrl(googleMapsWebUri)) {
+        await launchUrl(googleMapsWebUri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(googleMapsWebUri, mode: LaunchMode.externalApplication);
+      }
+      // Trigger native Picture-in-Picture floating mini-window over Google Maps
+      await Future.delayed(const Duration(milliseconds: 250));
+      await _enterPipMode();
+    } catch (e) {
+      debugPrint('Error launching Google Maps: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Opening maps: $e')),
+        );
+      }
+    }
   }
 
   void _listenToRide() {
@@ -92,7 +154,9 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
 
   @override
   void dispose() {
+    _setPipAllowed(false);
     _rideSub?.cancel();
+    _positionSub?.cancel();
     _otpController.dispose();
     super.dispose();
   }
@@ -274,7 +338,98 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
   @override
   Widget build(BuildContext context) {
     final status = _currentRide.status;
-    final target = status == 'started' ? _currentRide.drop : _currentRide.pickup;
+    final isEnRouteToPickup = status == 'accepted' || status == 'arrived';
+    final target = (status == 'started') ? _currentRide.drop : _currentRide.pickup;
+
+    final media = MediaQuery.of(context);
+    final isPipMode = media.size.height < 320 || media.size.width < 320;
+
+    if (isPipMode) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        status == 'started' ? 'To Drop: ${_currentRide.drop.address}' : 'To Pickup: ${_currentRide.pickup.address}',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0EEFD),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'PIN: ${_currentRide.otp}',
+                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w900, color: AppColors.primary),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  height: 32,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (status == 'accepted') {
+                        _handleArrivedAtPickup();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: Text(
+                      status == 'accepted'
+                          ? 'Arrived at Pickup'
+                          : (status == 'arrived' ? 'Awaiting Start PIN' : 'Trip in Progress 🌸'),
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Real-time live origin from captain's device GPS
+    final originLat = _captainPosition?.latitude ?? (isEnRouteToPickup ? (_currentRide.pickup.lat - 0.005) : _currentRide.pickup.lat);
+    final originLng = _captainPosition?.longitude ?? (isEnRouteToPickup ? (_currentRide.pickup.lng - 0.005) : _currentRide.pickup.lng);
+    final destLat = target.lat;
+    final destLng = target.lng;
+
+    final routePoints = [
+      ll.LatLng(originLat, originLng),
+      ll.LatLng(destLat, destLng),
+    ];
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -286,14 +441,38 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
               bottom: 270,
               child: kIsWeb
                   ? SheRideInteractiveMap(
-                      initialLat: target.lat,
-                      initialLng: target.lng,
-                      initialZoom: 14.5,
-                      routePoints: [
-                        ll.LatLng(_currentRide.pickup.lat, _currentRide.pickup.lng),
-                        ll.LatLng(_currentRide.drop.lat, _currentRide.drop.lng),
-                      ],
+                      initialLat: (originLat + destLat) / 2,
+                      initialLng: (originLng + destLng) / 2,
+                      initialZoom: 14.2,
+                      routePoints: routePoints,
                       markers: [
+                        // Captain Live Position Pin
+                        SheRideMarker(
+                          point: ll.LatLng(originLat, originLng),
+                          width: 50,
+                          height: 50,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.primary.withValues(alpha: 0.25),
+                            ),
+                            child: Center(
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.primary,
+                                  border: Border.all(color: Colors.white, width: 2.5),
+                                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.two_wheeler_rounded, size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                         // Pickup Marker
                         SheRideMarker(
                           point: ll.LatLng(_currentRide.pickup.lat, _currentRide.pickup.lng),
@@ -340,12 +519,36 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                     )
                   : mb.MapWidget(
                       cameraOptions: mb.CameraOptions(
-                        center: mb.Point(coordinates: mb.Position(target.lng, target.lat)),
-                        zoom: 14.5,
+                        center: mb.Point(coordinates: mb.Position((originLng + destLng) / 2, (originLat + destLat) / 2)),
+                        zoom: 14.0,
                       ),
                       styleUri: ApiConstants.mapboxStyleUrl,
                       onMapCreated: _onMapCreated,
                     ),
+            ),
+
+            // Floating "Open in Google Maps" Navigation Button
+            Positioned(
+              right: 16,
+              bottom: 285,
+              child: ElevatedButton.icon(
+                onPressed: () => _openGoogleMapsNavigation(
+                  destLat,
+                  destLng,
+                  status == 'started' ? 'Drop Location' : 'Pickup Location',
+                ),
+                icon: const Icon(Icons.navigation_rounded, color: Colors.white, size: 18),
+                label: Text(
+                  status == 'started' ? 'Google Maps: Drop 🗺️' : 'Google Maps: Pickup 🗺️',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 12.5, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A73E8), // Google Navigation Blue
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                ),
+              ),
             ),
 
             // Top Status & Navigation Badge
@@ -495,12 +698,36 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Step 1: Accepted -> Button "Arrived at Pickup"
+                    // Step 1: Accepted -> Buttons "Google Maps" & "Arrived at Pickup"
                     if (status == 'accepted') ...[
-                      CustomButton(
-                        text: 'Arrived at Pickup →',
-                        isLoading: _isLoading,
-                        onPressed: _handleArrivedAtPickup,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _openGoogleMapsNavigation(
+                                _currentRide.pickup.lat,
+                                _currentRide.pickup.lng,
+                                'Pickup Location',
+                              ),
+                              icon: const Icon(Icons.turn_right_rounded, color: Color(0xFF1A73E8), size: 18),
+                              label: const Text('Open Maps', style: TextStyle(color: Color(0xFF1A73E8), fontWeight: FontWeight.bold)),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Color(0xFF1A73E8), width: 1.5),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: CustomButton(
+                              text: 'Arrived at Pickup →',
+                              isLoading: _isLoading,
+                              onPressed: _handleArrivedAtPickup,
+                            ),
+                          ),
+                        ],
                       ),
                     ]
                     // Step 2: Arrived -> OTP Input + "Start Ride"

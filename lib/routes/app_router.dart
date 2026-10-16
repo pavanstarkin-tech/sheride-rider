@@ -17,6 +17,7 @@ import '../features/rides/presentation/active_ride_screen.dart';
 import '../features/rides/presentation/ride_history_screen.dart';
 import '../features/safety/presentation/rider_safety_screen.dart';
 import '../features/splash/presentation/splash_screen.dart';
+import '../features/auth/presentation/captain_intro_screen.dart';
 import '../features/auth/presentation/captain_onboarding_screen.dart';
 import '../features/auth/presentation/waiting_approval_screen.dart';
 import '../features/support/presentation/support_screen.dart';
@@ -28,11 +29,16 @@ class AppRouter {
     redirect: (BuildContext context, GoRouterState state) {
       final user = FirebaseAuth.instance.currentUser;
       final location = state.matchedLocation;
-      final publicRoutes = ['/', '/login', '/otp', '/register'];
+      final publicRoutes = ['/', '/intro', '/welcome', '/login', '/otp', '/register'];
 
       // If user is NOT logged in and trying to access any protected screen
       if (user == null && !publicRoutes.contains(location)) {
-        return '/login';
+        return '/intro';
+      }
+
+      // If user IS logged in and trying to access auth/intro screens, redirect to home
+      if (user != null && (location == '/intro' || location == '/welcome' || location == '/login' || location == '/otp')) {
+        return '/home';
       }
 
       return null;
@@ -41,6 +47,14 @@ class AppRouter {
       GoRoute(
         path: '/',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/intro',
+        builder: (context, state) => const CaptainIntroScreen(),
+      ),
+      GoRoute(
+        path: '/welcome',
+        builder: (context, state) => const CaptainIntroScreen(),
       ),
       GoRoute(
         path: '/login',

@@ -48,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     if (currentUser == null) {
       // Clear any dangling local tokens
       await StorageService().clearSession();
-      if (mounted) context.go('/login');
+      if (mounted) context.go('/intro');
       return;
     }
 
