@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import '../constants/api_constants.dart';
 
 class FcmTokenService {
   static final FcmTokenService _instance = FcmTokenService._internal();
@@ -35,7 +38,7 @@ class FcmTokenService {
     }
 
     final now = DateTime.now().millisecondsSinceEpoch;
-    final platform = kIsWeb ? 'web' : 'mobile';
+    final platform = kIsWeb ? 'web' : 'android';
 
     // 1. Save in Firebase Realtime Database
     final db = _db;
@@ -60,10 +63,35 @@ class FcmTokenService {
       }
     }
 
+    // 2. Dispatch to live Hostinger PHP REST endpoint: save_fcm_token.php
+    _syncTokenWithBackend(uid, token, 'rider', platform);
+
     return token;
   }
 
-  /// Dispatch ride notification to passenger
+  /// Background sync to PHP API save_fcm_token.php
+  void _syncTokenWithBackend(String uid, String token, String role, String platform) {
+    try {
+      final url = Uri.parse(ApiConstants.saveFcmToken);
+      http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'uid': uid,
+          'token': token,
+          'fcmToken': token,
+          'role': role,
+          'platform': platform,
+        }),
+      ).then((res) {
+        debugPrint('Rider FCM Token registered with API [${res.statusCode}]: ${res.body}');
+      }).catchError((err) {
+        debugPrint('Rider FCM Token API sync warning: $err');
+      });
+    } catch (_) {}
+  }
+
+  /// Dispatch ride notification to passenger via PHP Cloud Endpoint & RTDB
   Future<void> sendPassengerPushNotification({
     required String rideId,
     required String event,
@@ -100,5 +128,23 @@ class FcmTokenService {
         debugPrint('Push notification RTDB dispatch warning: $e');
       }
     }
+
+    // Also trigger live PHP push notification endpoint on farmx.acheva.in
+    try {
+      final url = Uri.parse(ApiConstants.sendRideNotification);
+      http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'rideId': rideId,
+          'event': event,
+          'targetUid': passengerUid,
+          'passengerUid': passengerUid,
+          'title': title,
+          'body': body,
+          ...data,
+        }),
+      ).catchError((_) => http.Response('', 500));
+    } catch (_) {}
   }
 }
