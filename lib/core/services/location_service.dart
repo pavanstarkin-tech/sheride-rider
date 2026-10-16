@@ -59,6 +59,27 @@ class LocationService {
     String? riderName,
   }) {
     _positionStreamSub?.cancel();
+
+    // Immediately push current or cached coordinates to RTDB
+    getCurrentPosition().then((pos) {
+      final p = pos ?? _lastKnownPosition;
+      if (p != null) {
+        _db.ref('riderLocations/$riderId').update({
+          'riderId': riderId,
+          'lat': p.latitude,
+          'latitude': p.latitude,
+          'lng': p.longitude,
+          'longitude': p.longitude,
+          'heading': p.heading,
+          'updatedAt': ServerValue.timestamp,
+          'isOnline': isOnline,
+          'currentRideId': currentRideId,
+          if (vehicleType != null) 'vehicleType': vehicleType,
+          if (riderName != null) 'riderName': riderName,
+        }).catchError((err) => debugPrint("Immediate riderLocations write notice: $err"));
+      }
+    });
+
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 5,
