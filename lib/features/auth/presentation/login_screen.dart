@@ -24,7 +24,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _formKey = GlobalKey<FormState>();
 
   final String _selectedCountryCode = '+91';
+  final _nameController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _isSignUp = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isGoogleLoading = false;
 
   @override
@@ -39,6 +43,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _nameController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -119,28 +125,145 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _handleEmailLogin() async {
+  Future<void> _handleEmailSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
     final authService = context.read<AuthService>();
-    try {
-      final cred = await authService.signInWithEmailPassword(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-      if (mounted && cred?.user != null) {
-        await _navigateBasedOnRiderStatus(cred!.user!.uid);
-      }
-    } catch (e) {
-      if (mounted) {
+
+    if (_isSignUp) {
+      if (_passwordController.text != _confirmPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authService.errorMessage ?? e.toString()),
+          const SnackBar(
+            content: Text('Passwords do not match'),
             backgroundColor: AppColors.error,
           ),
         );
+        return;
+      }
+
+      try {
+        final cred = await authService.registerWithEmailPassword(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+        if (mounted && cred?.user != null) {
+          try {
+            await cred!.user!.updateDisplayName(_nameController.text.trim());
+          } catch (_) {}
+          await authService.sendEmailVerification();
+          _showEmailVerificationModal(_emailController.text.trim(), cred!.user!.uid);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authService.errorMessage ?? e.toString()),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } else {
+      try {
+        final cred = await authService.signInWithEmailPassword(
+          _emailController.text.trim(),
+          _passwordController.text,
+        );
+        if (mounted && cred?.user != null) {
+          await _navigateBasedOnRiderStatus(cred!.user!.uid);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authService.errorMessage ?? e.toString()),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     }
+  }
+
+  void _showEmailVerificationModal(String email, String uid) {
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF0EEFD),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.mark_email_read_outlined, size: 36, color: AppColors.primary),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Verify Captain Email',
+              style: GoogleFonts.fraunces(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF180D2B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'We sent an activation link to:\n$email\n\nPlease check your inbox and verify your email.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                color: const Color(0xFF666666),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            CustomButton(
+              text: "I've Verified, Continue",
+              onPressed: () async {
+                final authService = context.read<AuthService>();
+                await authService.reloadUser();
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) await _navigateBasedOnRiderStatus(uid);
+              },
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () async {
+                final authService = context.read<AuthService>();
+                await authService.sendEmailVerification();
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Verification email resent! Please check your inbox.')),
+                  );
+                }
+              },
+              child: Text(
+                'Resend Verification Email',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -487,9 +610,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           unselectedLabelColor: AppColors.textSecondary,
                           labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
                           dividerColor: Colors.transparent,
-                          tabs: const [
-                            Tab(text: 'Email Login'),
-                            Tab(text: 'Mobile OTP'),
+                          tabs: [
+                            Tab(text: _isSignUp ? 'Captain Register' : 'Captain Login'),
+                            const Tab(text: 'Mobile OTP'),
                           ],
                         ),
                       ),
@@ -500,95 +623,143 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         child: TabBarView(
                           controller: _tabController,
                           children: [
-                            // Tab 1: Email Login (with Quick Demo Fill)
+                            // Tab 1: Email Login / Register
                             Form(
                               key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (!_isSignUp) ...[
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Captain Credentials',
+                                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF180D2B)),
+                                          ),
+                                          TextButton.icon(
+                                            onPressed: _quickFillCaptainDemo,
+                                            style: TextButton.styleFrom(
+                                              padding: EdgeInsets.zero,
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            ),
+                                            icon: const Icon(Icons.auto_awesome, size: 14, color: Color(0xFF7F00FD)),
+                                            label: Text(
+                                              'Quick Demo Fill',
+                                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF7F00FD)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                    if (_isSignUp) ...[
                                       Text(
-                                        'Captain Credentials',
+                                        'Register as a Lady Captain',
                                         style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF180D2B)),
                                       ),
-                                      TextButton.icon(
-                                        onPressed: _quickFillCaptainDemo,
-                                        style: TextButton.styleFrom(
-                                          padding: EdgeInsets.zero,
-                                          minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      const SizedBox(height: 8),
+                                      CustomTextField(
+                                        controller: _nameController,
+                                        label: 'Full Name',
+                                        hintText: 'e.g. Durga Devi',
+                                        prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 18),
+                                        validator: (val) {
+                                          if (val == null || val.trim().isEmpty) return 'Please enter your full name';
+                                          return null;
+                                        },
+                                      ),
+                                      const SizedBox(height: 14),
+                                    ],
+                                    const SizedBox(height: 8),
+                                    CustomTextField(
+                                      controller: _emailController,
+                                      label: 'Captain Email Address',
+                                      hintText: 'durga.relangi@sheride.app',
+                                      prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary, size: 18),
+                                      keyboardType: TextInputType.emailAddress,
+                                      validator: (val) {
+                                        if (val == null || !val.contains('@')) return 'Please enter a valid email address';
+                                        return null;
+                                      },
+                                    ),
+                                    const SizedBox(height: 14),
+                                    CustomTextField(
+                                      controller: _passwordController,
+                                      label: 'Password',
+                                      hintText: '••••••••',
+                                      obscureText: _obscurePassword,
+                                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 18),
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                          color: const Color(0xFF757575),
+                                          size: 18,
                                         ),
-                                        icon: const Icon(Icons.auto_awesome, size: 14, color: Color(0xFF7F00FD)),
-                                        label: Text(
-                                          'Quick Demo Fill',
-                                          style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF7F00FD)),
+                                        onPressed: () {
+                                          setState(() => _obscurePassword = !_obscurePassword);
+                                        },
+                                      ),
+                                      validator: (val) {
+                                        if (val == null || val.length < 6) return 'Password must be at least 6 characters';
+                                        return null;
+                                      },
+                                    ),
+                                    if (_isSignUp) ...[
+                                      const SizedBox(height: 14),
+                                      CustomTextField(
+                                        controller: _confirmPasswordController,
+                                        label: 'Confirm Password',
+                                        hintText: '••••••••',
+                                        obscureText: _obscureConfirmPassword,
+                                        prefixIcon: const Icon(Icons.lock_reset_rounded, color: AppColors.primary, size: 18),
+                                        suffixIcon: IconButton(
+                                          icon: Icon(
+                                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                                            color: const Color(0xFF757575),
+                                            size: 18,
+                                          ),
+                                          onPressed: () {
+                                            setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                                          },
+                                        ),
+                                        validator: (val) {
+                                          if (val != _passwordController.text) return 'Passwords do not match';
+                                          return null;
+                                        },
+                                      ),
+                                    ],
+                                    if (!_isSignUp) ...[
+                                      const SizedBox(height: 6),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton(
+                                          onPressed: _showForgotPasswordModal,
+                                          style: TextButton.styleFrom(
+                                            padding: EdgeInsets.zero,
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          ),
+                                          child: Text(
+                                            'Forgot Password?',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  CustomTextField(
-                                    controller: _emailController,
-                                    label: 'Captain Email Address',
-                                    hintText: 'durga.relangi@sheride.app',
-                                    prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary, size: 18),
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (val) {
-                                      if (val == null || !val.contains('@')) return 'Please enter a valid email address';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  CustomTextField(
-                                    controller: _passwordController,
-                                    label: 'Password',
-                                    hintText: '••••••••',
-                                    obscureText: _obscurePassword,
-                                    prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 18),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                        color: const Color(0xFF757575),
-                                        size: 18,
-                                      ),
-                                      onPressed: () {
-                                        setState(() => _obscurePassword = !_obscurePassword);
-                                      },
+                                    const SizedBox(height: 16),
+                                    CustomButton(
+                                      text: _isSignUp ? 'Register as Captain' : 'Sign In as Captain',
+                                      isLoading: authService.isLoading,
+                                      onPressed: _handleEmailSubmit,
                                     ),
-                                    validator: (val) {
-                                      if (val == null || val.length < 6) return 'Password must be at least 6 characters';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton(
-                                      onPressed: _showForgotPasswordModal,
-                                      style: TextButton.styleFrom(
-                                        padding: EdgeInsets.zero,
-                                        minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      child: Text(
-                                        'Forgot Password?',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  CustomButton(
-                                    text: 'Sign In as Captain',
-                                    isLoading: authService.isLoading,
-                                    onPressed: _handleEmailLogin,
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
 
@@ -725,7 +896,37 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         ),
                       ),
 
-                      const SizedBox(height: 16),
+                      // Sign In / Register Toggle
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _isSignUp ? 'Already a registered Captain?' : 'Want to drive with us?',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _isSignUp = !_isSignUp;
+                              });
+                            },
+                            child: Text(
+                              _isSignUp ? 'Sign In' : 'Register / Sign Up',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
 
                       // Bottom Clickable Policies
                       Column(
