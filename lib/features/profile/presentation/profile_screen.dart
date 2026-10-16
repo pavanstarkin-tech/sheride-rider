@@ -93,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: const Text('Confirm Logout', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to go offline and log out of SheRide Captain?'),
+        content: const Text('Are you sure you want to go offline and log out of Lady Pilot Captain?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -376,7 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildMenuItem(
                             Icons.emergency_outlined,
                             'Captain SOS & Safety Hotline',
-                            subtitle: '24/7 Police & SheRide Dispatch Desk',
+                            subtitle: '24/7 Police & Lady Pilot Dispatch Desk',
                             badge: '24/7 ACTIVE',
                             onTap: () => context.push('/safety-hub'),
                           ),
@@ -413,16 +413,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onTap: () {
                           showAboutDialog(
                             context: context,
-                            applicationName: 'SheRide Captain Partner',
+                            applicationName: 'Lady Pilot Captain Partner',
                             applicationVersion: '1.0.0 (Build 1)',
                             applicationIcon: const Icon(Icons.two_wheeler_rounded, color: AppColors.primary, size: 36),
-                            applicationLegalese: '© 2026 SheRide Technologies. 100% Women-Driven Fleet across India.',
+                            applicationLegalese: '© 2026 Lady Pilot Technologies. 100% Women-Driven Fleet across India.',
                           );
                         },
                         child: Column(
                           children: [
                             Text(
-                              'SheRide Captain Partner • v1.0.0 (Build 1) 🌸',
+                              'Lady Pilot Captain Partner • v1.0.0 (Build 1) 🌸',
                               style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 4),

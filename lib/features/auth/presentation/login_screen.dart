@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   void _quickFillCaptainDemo() {
     setState(() {
       _emailController.text = 'durga.relangi@sheride.app';
-      _passwordController.text = 'SheRideTestPass@2026';
+      _passwordController.text = 'Lady PilotTestPass@2026';
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

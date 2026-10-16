@@ -71,7 +71,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         // Pending Admin KYC Approval -> strictly navigate to Waiting page!
         if (mounted) context.go('/waiting-approval');
       } else {
-        // Fully approved by SheRide Admin -> proceed to Captain Dashboard!
+        // Fully approved by Lady Pilot Admin -> proceed to Captain Dashboard!
         if (mounted) context.go('/home');
       }
     } catch (_) {

@@ -299,7 +299,7 @@ class _DocumentsKycScreenState extends State<DocumentsKycScreen> {
                       title: 'Women Safety & Police Clearance',
                       docKey: 'police_clearance',
                       icon: Icons.security_rounded,
-                      defaultNumber: 'PCC-2026-SHERIDE-0941',
+                      defaultNumber: 'PCC-2026-LADY PILOT-0941',
                       description: 'Official police background record check for women passengers',
                       status: _documents['police_clearance']?['status'] ?? (isApproved ? 'verified' : 'under_review'),
                     ),

@@ -25,7 +25,7 @@ class SafetyService {
   String get currentUid => _auth?.currentUser?.uid ?? '';
 
   static final List<EmergencyContactModel> _localContacts = [
-    const EmergencyContactModel(contactId: 'ct_r1', name: 'SheRide Captain SOS Hub', phone: '1800-SHERIDE-108', relation: 'Support'),
+    const EmergencyContactModel(contactId: 'ct_r1', name: 'Lady Pilot Captain SOS Hub', phone: '1800-LADY PILOT-108', relation: 'Support'),
     const EmergencyContactModel(contactId: 'ct_r2', name: 'National Women Helpline', phone: '1091', relation: 'Helpline'),
   ];
   static SosModel? _localSos;

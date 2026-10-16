@@ -160,7 +160,7 @@ class _EditRiderProfileScreenState extends State<EditRiderProfileScreen> {
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Your profile details are verified by SheRide Mission Control to ensure 100% women passenger safety.',
+                          'Your profile details are verified by Lady Pilot Mission Control to ensure 100% women passenger safety.',
                           style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.35),
                         ),
                       ),

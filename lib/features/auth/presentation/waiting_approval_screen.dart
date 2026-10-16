@@ -67,7 +67,7 @@ class _WaitingApprovalScreenState extends State<WaitingApprovalScreen> {
         if (verified && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('🎉 Congratulations! Your Captain account has been approved by SheRide Admin!'),
+              content: Text('🎉 Congratulations! Your Captain account has been approved by Lady Pilot Admin!'),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 4),
             ),
@@ -154,8 +154,8 @@ class _WaitingApprovalScreenState extends State<WaitingApprovalScreen> {
 
                     Text(
                       _status == 'rejected'
-                          ? 'Your document verification was rejected by SheRide Mission Control. Please update your details.'
-                          : 'Welcome $_riderName! Your application and vehicle documents are currently being verified by SheRide Admin Mission Control. Once approved, your Captain dashboard will unlock automatically.',
+                          ? 'Your document verification was rejected by Lady Pilot Mission Control. Please update your details.'
+                          : 'Welcome $_riderName! Your application and vehicle documents are currently being verified by Lady Pilot Admin Mission Control. Once approved, your Captain dashboard will unlock automatically.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 13.5,
@@ -280,7 +280,7 @@ class _WaitingApprovalScreenState extends State<WaitingApprovalScreen> {
                             title: 'Step 3: Admin KYC Verification',
                             subtitle: _status == 'rejected'
                                 ? 'Admin marked application as rejected'
-                                : 'SheRide Operations team review in progress',
+                                : 'Lady Pilot Operations team review in progress',
                             isDone: false,
                             isCurrent: true,
                           ),

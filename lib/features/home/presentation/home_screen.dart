@@ -238,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: const Text('⚠️ Account Suspended'),
               content: const Text(
-                'Your captain account has been temporarily restricted by SheRide Mission Control. Please contact Captain Safety Support for verification.',
+                'Your captain account has been temporarily restricted by Lady Pilot Mission Control. Please contact Captain Safety Support for verification.',
               ),
               actions: [
                 TextButton(
@@ -261,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: const Text('📋 KYC Review Required'),
               content: const Text(
-                'Your documents require re-verification by SheRide Mission Control. Please re-upload your driving license in Profile.',
+                'Your documents require re-verification by Lady Pilot Mission Control. Please re-upload your driving license in Profile.',
               ),
               actions: [
                 TextButton(

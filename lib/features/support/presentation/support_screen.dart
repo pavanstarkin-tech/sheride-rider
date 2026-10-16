@@ -168,7 +168,7 @@ class _SupportScreenState extends State<SupportScreen> {
                       color: Colors.green.shade700,
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Calling Captain Priority Hotline: 1800-SHERIDE-CAPTAIN...')),
+                          const SnackBar(content: Text('Calling Captain Priority Hotline: 1800-LADY PILOT-CAPTAIN...')),
                         );
                       },
                     ),

@@ -51,7 +51,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
         if (updated.status == 'cancelled') {
           final isByAdmin = updated.cancelledBy == 'admin';
           final msg = isByAdmin
-              ? '⚠️ Ride cancelled by SheRide Admin Mission Control${updated.cancelReason != null ? ": ${updated.cancelReason}" : ""}'
+              ? '⚠️ Ride cancelled by Lady Pilot Admin Mission Control${updated.cancelReason != null ? ": ${updated.cancelReason}" : ""}'
               : 'Ride was cancelled by passenger';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(msg), backgroundColor: AppColors.error, duration: const Duration(seconds: 4)),
@@ -59,7 +59,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
           context.go('/home');
         } else if (updated.status == 'completed' && _currentRide.status != 'completed') {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🎉 Ride marked as completed by SheRide Mission Control!'), backgroundColor: Colors.green),
+            const SnackBar(content: Text('🎉 Ride marked as completed by Lady Pilot Mission Control!'), backgroundColor: Colors.green),
           );
           context.go('/home');
         }

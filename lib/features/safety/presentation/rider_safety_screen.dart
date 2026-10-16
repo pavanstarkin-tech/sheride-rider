@@ -25,7 +25,7 @@ class _RiderSafetyScreenState extends State<RiderSafetyScreen> {
           ],
         ),
         content: const Text(
-          'Activate immediate emergency assistance? This alerts SheRide Emergency HQ & Nearest Police Dispatch.',
+          'Activate immediate emergency assistance? This alerts Lady Pilot Emergency HQ & Nearest Police Dispatch.',
         ),
         actions: [
           TextButton(
@@ -99,7 +99,7 @@ class _RiderSafetyScreenState extends State<RiderSafetyScreen> {
                               'CAPTAIN EMERGENCY SOS',
                               style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
                             ),
-                            Text('Instant hotline to Police & SheRide HQ', style: TextStyle(color: Colors.white70, fontSize: 11.5)),
+                            Text('Instant hotline to Police & Lady Pilot HQ', style: TextStyle(color: Colors.white70, fontSize: 11.5)),
                           ],
                         ),
                       ),
@@ -128,7 +128,7 @@ class _RiderSafetyScreenState extends State<RiderSafetyScreen> {
                     const Divider(height: 1, indent: 56, endIndent: 16),
                     _buildTile(Icons.pin_drop_rounded, 'Mandatory 4-Digit Ride PIN', 'Ride cannot start without the secret OTP from passenger'),
                     const Divider(height: 1, indent: 56, endIndent: 16),
-                    _buildTile(Icons.phone_in_talk_rounded, '24/7 Captain Safety Helpline', 'Direct toll-free access to SheRide Dispatch'),
+                    _buildTile(Icons.phone_in_talk_rounded, '24/7 Captain Safety Helpline', 'Direct toll-free access to Lady Pilot Dispatch'),
                     const Divider(height: 1, indent: 56, endIndent: 16),
                     _buildTile(Icons.health_and_safety_rounded, 'Comprehensive Ride Insurance', 'Full insurance coverage during active rides'),
                   ],

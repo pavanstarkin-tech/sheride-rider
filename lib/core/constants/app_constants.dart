@@ -1,7 +1,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'SheRide Partner';
+  static const String appName = 'Lady Pilot Partner';
   static const String appTagline = 'Drive With Pride. Earn With Safety.';
   static const String subTagline = 'Exclusive Platform For Women Captains';
   static const String heroTitle = 'Drive.\nEarn.\nEmpower.';
